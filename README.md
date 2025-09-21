@@ -56,6 +56,8 @@ cp .env.template .env
 streamlit run Home.py
 ```
 
+**Note**: The main application files are now organized in the `agents/` directory for better structure.
+
 ## Configuration
 
 The system requires the following environment variables:
@@ -102,15 +104,19 @@ pytest tests/test_state.py
 
 ```
 liquidround/
-├── Home.py                 # Main Streamlit application
-├── workflow.py            # LangGraph workflow definition
-├── agents/                # Agent implementations
-│   ├── base_agent.py
-│   ├── orchestrator.py
-│   ├── target_finder.py
-│   ├── valuer.py
+├── Home.py                 # Main application entry point
+├── agents/                # Core application and agent implementations
+│   ├── Home.py            # Streamlit application
+│   ├── workflow.py        # LangGraph workflow definition
+│   ├── base_agent.py      # Base agent class
+│   ├── orchestrator.py    # Workflow orchestrator
+│   ├── target_finder.py   # Target identification agent
+│   └── valuer.py          # Financial valuation agent
+├── prompts/               # Agent system prompts (Markdown format)
+│   ├── orchestrator.md
+│   ├── target_finder.md
+│   ├── valuer.md
 │   └── ...
-├── prompts/               # Agent system prompts
 ├── utils/                 # Utility modules
 │   ├── state.py
 │   ├── logging.py
@@ -132,7 +138,7 @@ liquidround/
 
 ### Customizing Prompts
 
-Agent prompts are stored in the `prompts/` directory as `.txt` files. Edit these files to customize agent behavior.
+Agent prompts are stored in the `prompts/` directory as `.md` (Markdown) files. Edit these files to customize agent behavior. The Markdown format allows for better formatting and documentation of prompts.
 
 ### Logging
 

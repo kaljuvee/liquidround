@@ -9,6 +9,10 @@ from pathlib import Path
 from langchain_openai import ChatOpenAI
 from langchain.schema import HumanMessage, SystemMessage
 
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from utils.state import State, update_agent_result
 from utils.logging import get_logger
 from utils.config import config
@@ -34,7 +38,10 @@ class BaseAgent(ABC):
     
     def _load_prompt(self, prompt_file: str) -> str:
         """Load prompt from file."""
-        prompt_path = Path("prompts") / prompt_file
+        # Get the directory containing this file
+        current_dir = Path(__file__).parent
+        # Go up one level to the project root, then into prompts
+        prompt_path = current_dir.parent / "prompts" / prompt_file
         if prompt_path.exists():
             return prompt_path.read_text().strip()
         else:

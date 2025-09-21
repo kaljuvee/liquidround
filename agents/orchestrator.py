@@ -2,7 +2,10 @@
 Orchestrator agent for routing workflows in LiquidRound system.
 """
 from typing import Dict, Any, Literal
-from agents.base_agent import BaseAgent
+from base_agent import BaseAgent
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.state import State
 
 
@@ -10,7 +13,7 @@ class OrchestratorAgent(BaseAgent):
     """Orchestrator agent that determines workflow routing."""
     
     def __init__(self):
-        super().__init__("orchestrator", "orchestrator.txt")
+        super().__init__("orchestrator", "orchestrator.md")
     
     async def _execute_logic(self, state: State) -> Dict[str, Any]:
         """Determine the appropriate workflow based on user input."""

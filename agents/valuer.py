@@ -5,7 +5,10 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 from typing import Dict, Any, Optional, List
-from agents.base_agent import BaseAgent
+from base_agent import BaseAgent
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.state import State
 
 
@@ -13,7 +16,7 @@ class ValuerAgent(BaseAgent):
     """Agent for financial valuation and analysis."""
     
     def __init__(self):
-        super().__init__("valuer", "valuer.txt")
+        super().__init__("valuer", "valuer.md")
     
     async def _execute_logic(self, state: State) -> Dict[str, Any]:
         """Perform valuation analysis for the target company."""

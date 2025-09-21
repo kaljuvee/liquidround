@@ -4,7 +4,10 @@ Target Finder agent for identifying acquisition targets.
 import yfinance as yf
 import pandas as pd
 from typing import Dict, Any, List
-from agents.base_agent import BaseAgent
+from base_agent import BaseAgent
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.state import State
 
 
@@ -12,7 +15,7 @@ class TargetFinderAgent(BaseAgent):
     """Agent for finding and evaluating acquisition targets."""
     
     def __init__(self):
-        super().__init__("target_finder", "target_finder.txt")
+        super().__init__("target_finder", "target_finder.md")
     
     async def _execute_logic(self, state: State) -> Dict[str, Any]:
         """Find acquisition targets based on buyer criteria."""
