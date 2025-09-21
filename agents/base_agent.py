@@ -143,7 +143,7 @@ class BaseAgent(ABC):
         """Extract relevant context from state for prompt formatting."""
         return {
             "user_query": state["user_query"],
-            "mode": state["mode"],
+            "mode": state.get("mode", "unknown"),
             "deal_type": state["deal"]["deal_type"],
             "company_name": state["deal"].get("company_name", ""),
             "industry": state["deal"].get("industry", ""),

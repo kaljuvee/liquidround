@@ -70,33 +70,42 @@ def display_header():
     st.markdown("---")
 
 def display_sidebar():
-    """Display the sidebar with workflow types and recent history."""
+    """Display sidebar with system status and recent workflows."""
     with st.sidebar:
-        st.header("🎯 Workflow Types")
+        st.header("📈 System Status")
         
-        st.subheader("Buyer-Led M&A")
-        st.write("Find acquisition targets, perform valuations, and strategic analysis")
+        # System metrics
+        recent_workflows = workflow_service.get_recent_workflows(10)
+        total_workflows = len(recent_workflows)
         
-        if st.button("🔍 Find Acquisition Targets", use_container_width=True):
-            return "Find fintech companies to acquire with $20-100M revenue"
+        if total_workflows > 0:
+            completed = len([w for w in recent_workflows if w["status"] == "completed"])
+            success_rate = (completed / total_workflows) * 100
+            
+            st.metric("Total Workflows", total_workflows)
+            st.metric("Success Rate", f"{success_rate:.1f}%")
+            
+            # Status distribution
+            status_counts = {}
+            for workflow in recent_workflows:
+                status = workflow["status"]
+                status_counts[status] = status_counts.get(status, 0) + 1
+            
+            st.write("**Status Distribution:**")
+            for status, count in status_counts.items():
+                st.write(f"• {status.title()}: {count}")
+        else:
+            st.info("No workflows yet")
         
-        if st.button("🏥 Healthcare SaaS Targets", use_container_width=True):
-            return "Looking for SaaS acquisition targets in healthcare"
+        st.markdown("---")
         
-        st.subheader("Seller-Led M&A")
-        st.write("Prepare for sale, find buyers, and optimize deal structure")
-        
-        if st.button("💼 Prepare Company for Sale", use_container_width=True):
-            return "Preparing to sell our B2B software company"
-        
-        if st.button("🎯 Find Strategic Buyers", use_container_width=True):
-            return "Need help finding buyers for our logistics business"
-        
-        st.subheader("IPO Analysis")
-        st.write("Assess IPO readiness and market conditions")
-        
-        if st.button("🏛️ IPO Readiness Assessment", use_container_width=True):
-            return "Assessing IPO readiness for our tech company"
+        # Configuration info
+        st.subheader("⚙️ Configuration")
+        try:
+            st.write(f"**Model:** {config.default_model}")
+            st.write(f"**Environment:** {'Production' if config.is_production else 'Development'}")
+        except Exception as e:
+            st.error(f"Configuration error: {e}")
         
         st.markdown("---")
         
@@ -118,6 +127,43 @@ def display_sidebar():
                 st.session_state.current_workflow_id = workflow['id']
                 st.rerun()
     
+    return None
+
+def display_sample_buttons():
+    """Display sample query buttons in 2 rows, 3 columns above the chat."""
+    st.subheader("🎯 Quick Start - Sample Queries")
+    
+    # Row 1
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("🔍 Find Acquisition Targets", use_container_width=True):
+            return "Find fintech companies to acquire with $20-100M revenue"
+    
+    with col2:
+        if st.button("🏥 Healthcare SaaS Targets", use_container_width=True):
+            return "Looking for SaaS acquisition targets in healthcare"
+    
+    with col3:
+        if st.button("💼 Prepare Company for Sale", use_container_width=True):
+            return "Preparing to sell our B2B software company"
+    
+    # Row 2
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("🎯 Find Strategic Buyers", use_container_width=True):
+            return "Need help finding buyers for our logistics business"
+    
+    with col2:
+        if st.button("🏛️ IPO Readiness Assessment", use_container_width=True):
+            return "Assessing IPO readiness for our tech company"
+    
+    with col3:
+        if st.button("🔬 Tech Startup Valuation", use_container_width=True):
+            return "Value our AI/ML startup for Series B funding"
+    
+    st.markdown("---")
     return None
 
 async def start_new_workflow(user_query: str):
@@ -224,83 +270,48 @@ def main():
     init_session_state()
     display_header()
     
-    # Sidebar
-    suggested_query = display_sidebar()
+    # Sidebar with system status and recent workflows
+    display_sidebar()
     
-    # Main content area
-    col1, col2 = st.columns([2, 1])
+    # Main content area - full width
+    # Sample buttons above chat
+    suggested_query = display_sample_buttons()
     
-    with col1:
-        st.subheader("💬 Chat Interface")
-        
-        # Chat input
-        if user_input := st.chat_input("Enter your M&A or IPO query..."):
-            # Start new workflow
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            workflow_id = loop.run_until_complete(start_new_workflow(user_input))
-            loop.close()
-            
-            if workflow_id:
-                st.rerun()
-        
-        # Handle suggested queries
-        if suggested_query:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            workflow_id = loop.run_until_complete(start_new_workflow(suggested_query))
-            loop.close()
-            
-            if workflow_id:
-                st.rerun()
-        
-        # Display current workflow
-        if st.session_state.current_workflow_id:
-            display_workflow_status(st.session_state.current_workflow_id)
-            
-            # Auto-refresh for active workflows
-            summary = workflow_service.get_workflow_status(st.session_state.current_workflow_id)
-            if summary and summary.get("workflow", {}).get("status") in ["pending", "routing", "executing"]:
-                time.sleep(2)
-                st.rerun()
-        else:
-            st.info("👋 Welcome to LiquidRound! Start by selecting a workflow type from the sidebar or typing your query below.")
+    # Chat interface
+    st.subheader("💬 Chat Interface")
     
-    with col2:
-        st.subheader("📈 System Status")
+    # Chat input
+    if user_input := st.chat_input("Enter your M&A or IPO query..."):
+        # Start new workflow
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        workflow_id = loop.run_until_complete(start_new_workflow(user_input))
+        loop.close()
         
-        # System metrics
-        recent_workflows = workflow_service.get_recent_workflows(10)
-        total_workflows = len(recent_workflows)
+        if workflow_id:
+            st.rerun()
+    
+    # Handle suggested queries from buttons
+    if suggested_query:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        workflow_id = loop.run_until_complete(start_new_workflow(suggested_query))
+        loop.close()
         
-        if total_workflows > 0:
-            completed = len([w for w in recent_workflows if w["status"] == "completed"])
-            success_rate = (completed / total_workflows) * 100
-            
-            st.metric("Total Workflows", total_workflows)
-            st.metric("Success Rate", f"{success_rate:.1f}%")
-            
-            # Status distribution
-            status_counts = {}
-            for workflow in recent_workflows:
-                status = workflow["status"]
-                status_counts[status] = status_counts.get(status, 0) + 1
-            
-            st.write("**Status Distribution:**")
-            for status, count in status_counts.items():
-                st.write(f"• {status.title()}: {count}")
-        else:
-            st.info("No workflows yet")
+        if workflow_id:
+            st.rerun()
+    
+    # Display current workflow
+    if st.session_state.current_workflow_id:
+        display_workflow_status(st.session_state.current_workflow_id)
         
-        st.markdown("---")
-        
-        # Configuration info
-        st.subheader("⚙️ Configuration")
-        try:
-            st.write(f"**Model:** {config.default_model}")
-            st.write(f"**Environment:** {'Production' if config.is_production else 'Development'}")
-        except Exception as e:
-            st.error(f"Configuration error: {e}")
+        # Auto-refresh for active workflows
+        summary = workflow_service.get_workflow_status(st.session_state.current_workflow_id)
+        if summary and summary.get("workflow", {}).get("status") in ["pending", "routing", "executing"]:
+            time.sleep(2)
+            st.rerun()
+    else:
+        st.info("👋 Welcome to LiquidRound! Start by selecting a sample query above or typing your own query below.")
 
 
 if __name__ == "__main__":

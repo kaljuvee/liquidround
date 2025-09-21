@@ -30,6 +30,10 @@ class WorkflowService:
         if name not in self._agent_registry:
             # Lazy import agents only when needed
             try:
+                import sys
+                import os
+                sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                
                 if name == "orchestrator":
                     from agents.orchestrator import OrchestratorAgent
                     self._agent_registry[name] = OrchestratorAgent
@@ -78,7 +82,8 @@ class WorkflowService:
             
             # Create a proper state object for the orchestrator
             state = {
-                "user_query": user_query, 
+                "user_query": user_query,
+                "mode": "unknown",
                 "messages": [],
                 "deal": {
                     "deal_id": workflow_id,
@@ -96,9 +101,13 @@ class WorkflowService:
             }
             
             try:
-                orchestrator_result = await orchestrator.execute(state)
+                updated_state = await orchestrator.execute(state)
                 
                 execution_time = time.time() - start_time
+                
+                # Extract orchestrator result from the updated state
+                orchestrator_result = updated_state["agent_results"]["orchestrator"]["result"]
+                
                 db_service.save_agent_result(
                     workflow_id, "orchestrator", orchestrator_result, 
                     "success", execution_time
@@ -134,7 +143,25 @@ class WorkflowService:
     async def _execute_ma_workflow(self, workflow_id: str, user_query: str, workflow_type: str):
         """Execute M&A workflow with target finder and valuer."""
         try:
-            state = {"user_query": user_query, "workflow_type": workflow_type, "messages": []}
+            # Create proper state structure
+            state = {
+                "user_query": user_query,
+                "mode": workflow_type,
+                "messages": [],
+                "deal": {
+                    "deal_id": workflow_id,
+                    "deal_type": workflow_type,
+                    "company_name": None,
+                    "industry": None,
+                    "deal_size": None,
+                    "status": "executing",
+                    "created_at": datetime.now().isoformat(),
+                    "updated_at": datetime.now().isoformat(),
+                    "metadata": {}
+                },
+                "agent_results": {},
+                "workflow_status": "executing"
+            }
             
             # Step 1: Target Finder
             db_service.add_message(workflow_id, "assistant", "🔍 **Finding acquisition targets...**")
@@ -144,9 +171,13 @@ class WorkflowService:
                 start_time = time.time()
                 
                 try:
-                    target_result = await target_finder.execute(state)
+                    updated_state = await target_finder.execute(state)
                     
                     execution_time = time.time() - start_time
+                    
+                    # Extract target finder result from updated state
+                    target_result = updated_state["agent_results"]["target_finder"]["result"]
+                    
                     db_service.save_agent_result(
                         workflow_id, "target_finder", target_result,
                         "success", execution_time
@@ -179,9 +210,13 @@ class WorkflowService:
                 start_time = time.time()
                 
                 try:
-                    valuation_result = await valuer.execute(state)
+                    updated_state = await valuer.execute(state)
                     
                     execution_time = time.time() - start_time
+                    
+                    # Extract valuer result from updated state
+                    valuation_result = updated_state["agent_results"]["valuer"]["result"]
+                    
                     db_service.save_agent_result(
                         workflow_id, "valuer", valuation_result,
                         "success", execution_time

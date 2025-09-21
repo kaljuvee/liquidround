@@ -28,10 +28,7 @@ class Config:
         # Validate required keys
         self._validate_config()
     
-    @property
-    def is_production(self) -> bool:
-        """Check if running in production environment."""
-        return self.environment.lower() == "production"
+
     
     def _validate_config(self):
         """Validate that required configuration is present."""
