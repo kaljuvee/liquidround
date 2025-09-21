@@ -3,6 +3,7 @@ Workflow service layer for managing agent execution.
 """
 import asyncio
 import time
+from datetime import datetime
 from typing import Dict, Any, Optional
 from concurrent.futures import ThreadPoolExecutor
 
@@ -30,13 +31,13 @@ class WorkflowService:
             # Lazy import agents only when needed
             try:
                 if name == "orchestrator":
-                    from ..agents.orchestrator import OrchestratorAgent
+                    from agents.orchestrator import OrchestratorAgent
                     self._agent_registry[name] = OrchestratorAgent
                 elif name == "target_finder":
-                    from ..agents.target_finder import TargetFinderAgent
+                    from agents.target_finder import TargetFinderAgent
                     self._agent_registry[name] = TargetFinderAgent
                 elif name == "valuer":
-                    from ..agents.valuer import ValuerAgent
+                    from agents.valuer import ValuerAgent
                     self._agent_registry[name] = ValuerAgent
                 else:
                     logger.error(f"Unknown agent: {name}")
@@ -75,13 +76,27 @@ class WorkflowService:
             
             start_time = time.time()
             
-            # Create a simple state object for the orchestrator
-            state = {"user_query": user_query, "messages": []}
+            # Create a proper state object for the orchestrator
+            state = {
+                "user_query": user_query, 
+                "messages": [],
+                "deal": {
+                    "deal_id": workflow_id,
+                    "deal_type": "unknown",
+                    "company_name": None,
+                    "industry": None,
+                    "deal_size": None,
+                    "status": "pending",
+                    "created_at": datetime.now().isoformat(),
+                    "updated_at": datetime.now().isoformat(),
+                    "metadata": {}
+                },
+                "agent_results": {},
+                "workflow_status": "routing"
+            }
             
             try:
-                orchestrator_result = await asyncio.get_event_loop().run_in_executor(
-                    self.executor, orchestrator.execute, state
-                )
+                orchestrator_result = await orchestrator.execute(state)
                 
                 execution_time = time.time() - start_time
                 db_service.save_agent_result(
@@ -129,9 +144,7 @@ class WorkflowService:
                 start_time = time.time()
                 
                 try:
-                    target_result = await asyncio.get_event_loop().run_in_executor(
-                        self.executor, target_finder.execute, state
-                    )
+                    target_result = await target_finder.execute(state)
                     
                     execution_time = time.time() - start_time
                     db_service.save_agent_result(
@@ -166,9 +179,7 @@ class WorkflowService:
                 start_time = time.time()
                 
                 try:
-                    valuation_result = await asyncio.get_event_loop().run_in_executor(
-                        self.executor, valuer.execute, state
-                    )
+                    valuation_result = await valuer.execute(state)
                     
                     execution_time = time.time() - start_time
                     db_service.save_agent_result(

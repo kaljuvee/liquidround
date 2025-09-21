@@ -296,8 +296,8 @@ def main():
         
         # Configuration info
         st.subheader("⚙️ Configuration")
-        st.write(f"**Model:** {config.get('model', 'gpt-4o-mini')}")
-        st.write(f"**Environment:** {'Production' if config.get('environment') == 'production' else 'Development'}")
+        st.write(f"**Model:** {config.default_model}")
+        st.write(f"**Environment:** {'Production' if config.is_production else 'Development'}")
 
 
 if __name__ == "__main__":
