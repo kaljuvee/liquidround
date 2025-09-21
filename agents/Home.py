@@ -233,7 +233,8 @@ def main():
             
             # Add assistant response to messages
             if st.session_state.workflow_state:
-                response = f"Completed {st.session_state.workflow_state['mode']} workflow analysis."
+                mode = st.session_state.workflow_state.get('mode', 'unknown')
+                response = f"Completed {mode} workflow analysis."
                 st.session_state.messages.append({"role": "assistant", "content": response})
     
     with col2:
@@ -243,19 +244,23 @@ def main():
             state = st.session_state.workflow_state
             
             # Show workflow info
-            st.metric("Workflow Type", state["mode"].replace("_", " ").title())
-            st.metric("Status", state["workflow_status"].title())
-            st.metric("Deal ID", state["deal"]["deal_id"])
+            st.metric("Workflow Type", state.get("mode", "unknown").replace("_", " ").title())
+            st.metric("Status", state.get("workflow_status", "unknown").title())
+            st.metric("Deal ID", state.get("deal", {}).get("deal_id", "N/A"))
             
             # Show agent status
             st.subheader("🤖 Agent Status")
-            for agent_name, result in state["agent_results"].items():
-                status = result["status"]
-                icon = "✅" if status == "success" else "❌" if status == "error" else "⏳"
-                st.markdown(f"{icon} **{agent_name.replace('_', ' ').title()}**: {status}")
-                
-                if status == "error" and result.get("error_message"):
-                    st.error(f"Error: {result['error_message']}")
+            agent_results = state.get("agent_results", {})
+            if agent_results:
+                for agent_name, result in agent_results.items():
+                    status = result.get("status", "unknown")
+                    icon = "✅" if status == "success" else "❌" if status == "error" else "⏳"
+                    st.markdown(f"{icon} **{agent_name.replace('_', ' ').title()}**: {status}")
+                    
+                    if status == "error" and result.get("error_message"):
+                        st.error(f"Error: {result['error_message']}")
+            else:
+                st.info("No agent results available yet")
         
         else:
             st.info("Start a conversation to see workflow status")

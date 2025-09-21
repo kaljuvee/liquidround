@@ -59,10 +59,9 @@ class LiquidRoundWorkflow:
         workflow.add_edge("seller_ma_workflow", END)
         workflow.add_edge("ipo_workflow", END)
         
-        # Add memory/checkpointing
-        memory = SqliteSaver.from_conn_string("db/liquidround.db")
-        
-        return workflow.compile(checkpointer=memory)
+        # Compile the workflow without checkpointing for now
+        # TODO: Fix checkpointing implementation later
+        return workflow.compile()
     
     async def _orchestrator_node(self, state: State) -> State:
         """Execute the orchestrator agent."""
