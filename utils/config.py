@@ -19,11 +19,12 @@ class Config:
         self.exa_api_key = os.getenv("EXA_API_KEY")
         
         # Model settings
-        self.default_model = os.getenv("DEFAULT_MODEL", "gpt-4.1-nano")
+        self.default_model = os.getenv("DEFAULT_MODEL", "gpt-4o-mini")
         self.default_temperature = float(os.getenv("DEFAULT_TEMPERATURE", "0.7"))
         
         # Environment
         self.environment = os.getenv("ENVIRONMENT", "development")
+        self.is_production = self.environment.lower() == "production"
         
         # Validate required keys
         self._validate_config()

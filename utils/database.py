@@ -16,18 +16,30 @@ logger = get_logger("database")
 class DatabaseService:
     """Database service for managing workflows and results."""
     
-    def __init__(self, db_path: str = "liquidround.db"):
+    def __init__(self, db_path: str = "db/liquidround.db"):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(exist_ok=True)
         self._init_database()
     
     def _init_database(self):
         """Initialize the database with required tables."""
+        # Read and execute the SQL schema
+        schema_path = Path(__file__).parent.parent / "sql" / "create-tables.sql"
+        
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             
-            # Workflows table
-            cursor.execute("""
+            if schema_path.exists():
+                with open(schema_path, 'r') as f:
+                    schema_sql = f.read()
+                    # Execute each statement separately
+                    for statement in schema_sql.split(';'):
+                        statement = statement.strip()
+                        if statement:
+                            cursor.execute(statement)
+            else:
+                # Fallback to basic tables if schema file not found
+                cursor.execute("""
                 CREATE TABLE IF NOT EXISTS workflows (
                     id TEXT PRIMARY KEY,
                     user_query TEXT NOT NULL,
