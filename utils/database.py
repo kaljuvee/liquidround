@@ -232,6 +232,10 @@ class DatabaseService:
             
             return workflows
     
+    def get_workflow_status(self, workflow_id: str) -> Dict[str, Any]:
+        """Get workflow status - alias for get_workflow_summary for compatibility."""
+        return self.get_workflow_summary(workflow_id)
+    
     def get_workflow_summary(self, workflow_id: str) -> Dict[str, Any]:
         """Get a complete summary of a workflow including results and messages."""
         workflow = self.get_workflow(workflow_id)

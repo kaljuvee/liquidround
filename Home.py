@@ -1,20 +1,21 @@
 """
 LiquidRound - Multi-Agent M&A and IPO Deal Flow System
-Main Streamlit Application
+Enhanced Main Streamlit Application with Real-time Progress
 """
 import streamlit as st
 import asyncio
 import time
+import json
 from datetime import datetime
 from typing import Dict, Any
 
 # Import only utils and database services
 from utils.database import db_service
-from utils.workflow_service import workflow_service
+from utils.workflow_service import enhanced_workflow_service
 from utils.logging import get_logger
 from utils.config import config
 
-logger = get_logger("streamlit_app")
+logger = get_logger("streamlit_app_enhanced")
 
 # Configure page
 st.set_page_config(
@@ -48,9 +49,39 @@ st.markdown("""
         margin: 0.5rem 0;
     }
     .status-pending { color: #ffa500; }
-    .status-executing { color: #007bff; }
+    .status-routing { color: #007bff; }
+    .status-executing { color: #28a745; }
     .status-completed { color: #28a745; }
     .status-failed { color: #dc3545; }
+    .agent-progress {
+        background: #e3f2fd;
+        padding: 0.8rem;
+        border-radius: 0.5rem;
+        border-left: 3px solid #2196f3;
+        margin: 0.5rem 0;
+    }
+    .agent-running {
+        background: #fff3e0;
+        border-left-color: #ff9800;
+    }
+    .agent-completed {
+        background: #e8f5e8;
+        border-left-color: #4caf50;
+    }
+    .agent-failed {
+        background: #ffebee;
+        border-left-color: #f44336;
+    }
+    .json-response {
+        background: #f5f5f5;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        font-family: monospace;
+        font-size: 0.9rem;
+        margin: 0.5rem 0;
+        max-height: 300px;
+        overflow-y: auto;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -60,8 +91,8 @@ def init_session_state():
         st.session_state.current_workflow_id = None
     if "messages" not in st.session_state:
         st.session_state.messages = []
-    if "workflow_history" not in st.session_state:
-        st.session_state.workflow_history = []
+    if "auto_refresh" not in st.session_state:
+        st.session_state.auto_refresh = True
 
 def display_header():
     """Display the main header."""
@@ -75,7 +106,7 @@ def display_sidebar():
         st.header("📈 System Status")
         
         # System metrics
-        recent_workflows = workflow_service.get_recent_workflows(10)
+        recent_workflows = enhanced_workflow_service.get_recent_workflows(10)
         total_workflows = len(recent_workflows)
         
         if total_workflows > 0:
@@ -109,15 +140,24 @@ def display_sidebar():
         
         st.markdown("---")
         
+        # Auto-refresh toggle
+        st.session_state.auto_refresh = st.checkbox("Auto-refresh active workflows", value=st.session_state.auto_refresh)
+        
+        st.markdown("---")
+        
         # Recent workflows
         st.subheader("📊 Recent Workflows")
-        recent_workflows = workflow_service.get_recent_workflows(5)
+        recent_workflows = enhanced_workflow_service.get_recent_workflows(5)
         
         for workflow in recent_workflows:
             status_class = f"status-{workflow['status']}"
+            workflow_type_display = workflow.get('workflow_type', 'unknown').upper()
+            if workflow_type_display == 'UNKNOWN':
+                workflow_type_display = '🔄 ROUTING'
+            
             st.markdown(f"""
             <div class="workflow-card">
-                <strong>{workflow['workflow_type'].upper()}</strong><br>
+                <strong>{workflow_type_display}</strong><br>
                 <small>{workflow['user_query'][:50]}...</small><br>
                 <span class="{status_class}">● {workflow['status']}</span>
             </div>
@@ -166,10 +206,83 @@ def display_sample_buttons():
     st.markdown("---")
     return None
 
+def display_agent_progress(workflow_id: str):
+    """Display real-time agent progress with spinners and JSON responses."""
+    progress = enhanced_workflow_service.get_workflow_progress(workflow_id)
+    
+    if not progress or not progress.get("progress"):
+        return
+    
+    st.subheader("🤖 Agent Progress")
+    
+    current_agent = progress.get("current_agent")
+    
+    # Show current agent with spinner
+    if current_agent:
+        with st.spinner(f"🔄 {current_agent.title()} is working..."):
+            st.write(f"**Currently Active:** {current_agent.title()}")
+    
+    # Show progress timeline
+    for i, step in enumerate(progress["progress"]):
+        agent_name = step["agent"]
+        status = step["status"]
+        timestamp = step["timestamp"]
+        data = step.get("data", {})
+        
+        # Determine CSS class based on status
+        css_class = "agent-progress"
+        if status == "running":
+            css_class += " agent-running"
+        elif status == "completed":
+            css_class += " agent-completed"
+        elif status == "failed":
+            css_class += " agent-failed"
+        
+        # Display progress step
+        with st.container():
+            if status == "running":
+                st.markdown(f"""
+                <div class="{css_class}">
+                    <strong>🔄 {agent_name.title()}</strong> - {status}<br>
+                    <small>{timestamp}</small><br>
+                    {data.get('message', 'Processing...')}
+                </div>
+                """, unsafe_allow_html=True)
+            elif status == "completed":
+                st.markdown(f"""
+                <div class="{css_class}">
+                    <strong>✅ {agent_name.title()}</strong> - {status}<br>
+                    <small>{timestamp}</small><br>
+                    {data.get('message', 'Completed successfully')}
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Show execution time if available
+                if "execution_time" in data:
+                    st.write(f"⏱️ Execution time: {data['execution_time']:.2f}s")
+                
+                # Show JSON response if available
+                if "result" in data and data["result"]:
+                    with st.expander(f"📋 {agent_name.title()} Results (JSON)", expanded=False):
+                        st.markdown(f"""
+                        <div class="json-response">
+                        {json.dumps(data["result"], indent=2)}
+                        </div>
+                        """, unsafe_allow_html=True)
+            
+            elif status == "failed":
+                st.markdown(f"""
+                <div class="{css_class}">
+                    <strong>❌ {agent_name.title()}</strong> - {status}<br>
+                    <small>{timestamp}</small><br>
+                    Error: {data.get('error', 'Unknown error')}
+                </div>
+                """, unsafe_allow_html=True)
+
 async def start_new_workflow(user_query: str):
     """Start a new workflow."""
     try:
-        workflow_id = await workflow_service.start_workflow(user_query)
+        workflow_id = await enhanced_workflow_service.start_workflow(user_query)
         st.session_state.current_workflow_id = workflow_id
         st.session_state.messages = [{"role": "user", "content": user_query}]
         logger.info(f"Started new workflow: {workflow_id}")
@@ -180,12 +293,12 @@ async def start_new_workflow(user_query: str):
         return None
 
 def display_workflow_status(workflow_id: str):
-    """Display current workflow status and results."""
+    """Display current workflow status and results with enhanced progress."""
     if not workflow_id:
         return
     
     try:
-        summary = workflow_service.get_workflow_status(workflow_id)
+        summary = enhanced_workflow_service.get_workflow_status(workflow_id)
         
         if not summary:
             st.warning("Workflow not found")
@@ -195,71 +308,101 @@ def display_workflow_status(workflow_id: str):
         results = summary.get("results", [])
         messages = summary.get("messages", [])
         
-        # Status header
-        status = workflow.get("status", "unknown")
-        status_class = f"status-{status}"
+        # Display workflow header with enhanced status
+        col1, col2, col3 = st.columns(3)
         
-        col1, col2, col3 = st.columns([2, 1, 1])
         with col1:
-            st.markdown(f"**Workflow:** {workflow.get('workflow_type', 'unknown').upper()}")
+            workflow_type = workflow.get("workflow_type", "unknown")
+            if workflow_type == "unknown":
+                st.write(f"**Workflow:** 🔄 ROUTING")
+            else:
+                st.write(f"**Workflow:** {workflow_type.upper()}")
+        
         with col2:
-            st.markdown(f"**Status:** <span class='{status_class}'>● {status}</span>", unsafe_allow_html=True)
+            status = workflow.get("status", "unknown")
+            status_emoji = {
+                "pending": "⏳",
+                "routing": "🔄",
+                "executing": "⚡",
+                "completed": "✅",
+                "failed": "❌"
+            }.get(status, "❓")
+            st.write(f"**Status:** {status_emoji} {status}")
+        
         with col3:
-            st.markdown(f"**Agents:** {len(results)}")
+            agent_count = len(results)
+            st.write(f"**Agents:** {agent_count}")
+        
+        st.markdown("---")
+        
+        # Display real-time agent progress
+        display_agent_progress(workflow_id)
         
         # Display messages
-        for message in messages:
-            role = message["role"]
-            content = message["content"]
-            
-            if role == "user":
-                with st.chat_message("user"):
-                    st.write(content)
-            else:
-                with st.chat_message("assistant"):
-                    st.markdown(content)
+        if messages:
+            st.subheader("💬 Conversation")
+            for message in messages:
+                role = message.get("role", "unknown")
+                content = message.get("content", "")
+                
+                if role == "user":
+                    st.chat_message("user").write(content)
+                elif role == "assistant":
+                    st.chat_message("assistant").write(content)
+                elif role == "system":
+                    # Try to parse as JSON for system messages
+                    try:
+                        system_data = json.loads(content)
+                        if system_data.get("agent") and system_data.get("status"):
+                            # Skip system messages as they're shown in progress
+                            continue
+                    except:
+                        st.chat_message("assistant").write(f"🔧 {content}")
         
-        # Display detailed results if available
+        # Display detailed agent results
         if results:
-            with st.expander("📊 Detailed Agent Results", expanded=False):
-                for result in results:
-                    agent_name = result["agent_name"]
-                    result_data = result["result_data"]
-                    execution_time = result.get("execution_time", 0)
-                    
-                    st.subheader(f"🤖 {agent_name.title()}")
-                    
-                    col1, col2 = st.columns([3, 1])
-                    with col1:
-                        st.write(f"Status: {result['status']}")
-                    with col2:
-                        st.write(f"Time: {execution_time:.2f}s")
-                    
-                    # Display specific result data based on agent type
-                    if agent_name == "target_finder" and "targets" in result_data:
-                        targets = result_data["targets"]
-                        if targets:
-                            st.write(f"**Found {len(targets)} targets:**")
-                            for i, target in enumerate(targets[:3], 1):
-                                st.write(f"{i}. **{target.get('company_name', 'Unknown')}**")
-                                st.write(f"   - Revenue: {target.get('estimated_revenue', 'N/A')}")
-                                st.write(f"   - Strategic Fit: {target.get('strategic_fit_score', 'N/A')}/5")
-                    
-                    elif agent_name == "valuer" and "key_metrics" in result_data:
-                        metrics = result_data["key_metrics"]
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.metric("Revenue", f"${metrics.get('revenue', 0):,.0f}")
-                        with col2:
-                            st.metric("EBITDA", f"${metrics.get('ebitda', 0):,.0f}")
-                        with col3:
-                            st.metric("Market Cap", f"${metrics.get('market_cap', 0):,.0f}")
-                    
-                    elif agent_name == "orchestrator":
-                        st.write(f"**Workflow Type:** {result_data.get('workflow_type', 'unknown')}")
-                        st.write(f"**Rationale:** {result_data.get('rationale', 'N/A')}")
-                    
-                    st.markdown("---")
+            st.subheader("🔍 Detailed Results")
+            for result in results:
+                agent_name = result.get("agent_name", "unknown")
+                status = result.get("status", "unknown")
+                result_data = result.get("result_data", {})
+                
+                if status == "success" and result_data:
+                    with st.expander(f"📊 {agent_name.title()} Results", expanded=False):
+                        
+                        if agent_name == "target_finder" and "targets" in result_data:
+                            targets = result_data["targets"]
+                            st.write(f"**Found {len(targets)} potential targets:**")
+                            
+                            for i, target in enumerate(targets[:10], 1):  # Show top 10
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    st.write(f"**{i}. {target.get('company_name', 'Unknown')}**")
+                                with col2:
+                                    st.write(f"Revenue: {target.get('estimated_revenue', 'N/A')}")
+                                with col3:
+                                    st.write(f"Fit Score: {target.get('strategic_fit_score', 'N/A')}/5")
+                                
+                                st.write(f"*{target.get('investment_highlights', 'No highlights available')}*")
+                                st.markdown("---")
+                        
+                        elif agent_name == "valuer" and "key_metrics" in result_data:
+                            metrics = result_data["key_metrics"]
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                st.metric("Revenue", f"${metrics.get('revenue', 0):,.0f}")
+                            with col2:
+                                st.metric("EBITDA", f"${metrics.get('ebitda', 0):,.0f}")
+                            with col3:
+                                st.metric("Market Cap", f"${metrics.get('market_cap', 0):,.0f}")
+                        
+                        elif agent_name == "orchestrator":
+                            st.write(f"**Workflow Type:** {result_data.get('workflow_type', 'unknown')}")
+                            st.write(f"**Rationale:** {result_data.get('rationale', 'N/A')}")
+                        
+                        # Always show raw JSON data
+                        with st.expander("📋 Raw JSON Data", expanded=False):
+                            st.json(result_data)
         
     except Exception as e:
         logger.error(f"Error displaying workflow status: {e}")
@@ -306,10 +449,11 @@ def main():
         display_workflow_status(st.session_state.current_workflow_id)
         
         # Auto-refresh for active workflows
-        summary = workflow_service.get_workflow_status(st.session_state.current_workflow_id)
-        if summary and summary.get("workflow", {}).get("status") in ["pending", "routing", "executing"]:
-            time.sleep(2)
-            st.rerun()
+        if st.session_state.auto_refresh:
+            summary = enhanced_workflow_service.get_workflow_status(st.session_state.current_workflow_id)
+            if summary and summary.get("workflow", {}).get("status") in ["pending", "routing", "executing"]:
+                time.sleep(2)
+                st.rerun()
     else:
         st.info("👋 Welcome to LiquidRound! Start by selecting a sample query above or typing your own query below.")
 
