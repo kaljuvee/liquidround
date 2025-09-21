@@ -14,8 +14,17 @@ import os
 # Add utils directory to path
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'utils'))
 
-from ipo_utils import IPODataFetcher, format_market_cap, format_percentage, get_country_from_exchange
-from database import db_service
+try:
+    from utils.ipo_utils import IPODataFetcher, format_market_cap, format_percentage, get_country_from_exchange
+    from utils.database import db_service
+except ImportError:
+    # Fallback for different import contexts
+    import sys
+    import os
+    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sys.path.insert(0, parent_dir)
+    from utils.ipo_utils import IPODataFetcher, format_market_cap, format_percentage, get_country_from_exchange
+    from utils.database import db_service
 
 # Page configuration
 st.set_page_config(
