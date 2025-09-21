@@ -219,8 +219,7 @@ def display_agent_progress(workflow_id: str):
     
     # Show current agent with spinner
     if current_agent:
-        with st.spinner(f"🔄 {current_agent.title()} is working..."):
-            st.write(f"**Currently Active:** {current_agent.title()}")
+        st.write(f"**Currently Active:** {current_agent.title()}")
     
     # Show progress timeline
     for i, step in enumerate(progress["progress"]):
@@ -238,16 +237,17 @@ def display_agent_progress(workflow_id: str):
         elif status == "failed":
             css_class += " agent-failed"
         
-        # Display progress step
+        # Display progress step with spinner for running agents
         with st.container():
             if status == "running":
-                st.markdown(f"""
-                <div class="{css_class}">
-                    <strong>🔄 {agent_name.title()}</strong> - {status}<br>
-                    <small>{timestamp}</small><br>
-                    {data.get('message', 'Processing...')}
-                </div>
-                """, unsafe_allow_html=True)
+                with st.spinner(f"🤖 {agent_name.title()} is thinking..."):
+                    st.markdown(f"""
+                    <div class="{css_class}">
+                        <strong>🔄 {agent_name.title()}</strong> - {status}<br>
+                        <small>{timestamp}</small><br>
+                        🎯 {data.get('message', 'Analyzing query and determining workflow type...')}
+                    </div>
+                    """, unsafe_allow_html=True)
             elif status == "completed":
                 st.markdown(f"""
                 <div class="{css_class}">
@@ -425,24 +425,27 @@ def main():
     
     # Chat input
     if user_input := st.chat_input("Enter your M&A or IPO query..."):
-        # Start new workflow
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        workflow_id = loop.run_until_complete(start_new_workflow(user_input))
-        loop.close()
-        
-        if workflow_id:
-            st.rerun()
+        # Start new workflow with spinner
+        with st.spinner("🚀 Starting workflow..."):
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            workflow_id = loop.run_until_complete(start_new_workflow(user_input))
+            loop.close()
+            
+            if workflow_id:
+                st.rerun()
     
     # Handle suggested queries from buttons
     if suggested_query:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        workflow_id = loop.run_until_complete(start_new_workflow(suggested_query))
-        loop.close()
-        
-        if workflow_id:
-            st.rerun()
+        # Start new workflow with spinner
+        with st.spinner("🚀 Starting workflow..."):
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            workflow_id = loop.run_until_complete(start_new_workflow(suggested_query))
+            loop.close()
+            
+            if workflow_id:
+                st.rerun()
     
     # Display current workflow
     if st.session_state.current_workflow_id:
