@@ -1,5 +1,5 @@
 """
-SQL Query Page - Text-to-SQL Agent for Deal Analysis
+Deal History Page - Natural Language Query Interface for Deal Analysis
 """
 import streamlit as st
 import sqlite3
@@ -13,18 +13,18 @@ from utils.logging import get_logger
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 
-logger = get_logger("sql_query_page")
+logger = get_logger("deal_history_page")
 
 st.set_page_config(
-    page_title="SQL Query - LiquidRound",
-    page_icon="📊",
+    page_title="Deal History - LiquidRound",
+    page_icon="📈",
     layout="wide"
 )
 
 # Custom CSS
 st.markdown("""
 <style>
-    .sql-query {
+    .query-result {
         background-color: #f8f9fa;
         padding: 1rem;
         border-radius: 0.5rem;
@@ -34,7 +34,7 @@ st.markdown("""
     .result-table {
         margin-top: 1rem;
     }
-    .schema-info {
+    .data-info {
         background-color: #e9ecef;
         padding: 1rem;
         border-radius: 0.5rem;
@@ -158,15 +158,15 @@ Common Query Patterns:
         return sql_query.strip()
     
     except Exception as e:
-        logger.error(f"Error generating SQL: {e}")
-        st.error(f"Error generating SQL: {e}")
+        logger.error(f"Error processing search: {e}")
+        st.error(f"Error processing search: {e}")
         return ""
 
 def main():
-    """Main function for SQL Query page."""
+    """Main function for Deal History page."""
     
-    st.title("📊 SQL Query Interface")
-    st.markdown("Query deal data using natural language or direct SQL")
+    st.title("📈 Deal History & Analytics")
+    st.markdown("Search and analyze deal data using natural language questions")
     
     # Get database schema
     schema = get_database_schema()
@@ -175,9 +175,9 @@ def main():
         st.warning("No database found or database is empty. Run some workflows first to generate data.")
         return
     
-    # Display schema information
-    with st.expander("📋 Database Schema", expanded=False):
-        st.markdown('<div class="schema-info">', unsafe_allow_html=True)
+    # Display data structure information
+    with st.expander("📋 Available Data", expanded=False):
+        st.markdown('<div class="data-info">', unsafe_allow_html=True)
         
         for table, columns in schema.items():
             st.subheader(f"Table: {table}")
@@ -191,7 +191,7 @@ def main():
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.subheader("🤖 Natural Language Query")
+        st.subheader("🔍 Search & Analytics")
         
         # Suggested questions
         st.markdown("**Suggested Questions:**")
@@ -217,9 +217,9 @@ def main():
             placeholder="e.g., Show me all deals in healthcare with valuations over $100M"
         )
         
-        if st.button("🔍 Generate SQL Query", type="primary"):
+        if st.button("🔍 Search Deal Data", type="primary"):
             if user_question:
-                with st.spinner("Generating SQL query..."):
+                with st.spinner("Searching deal data..."):
                     sql_query = generate_sql_from_text(user_question, schema)
                     
                     if sql_query:
@@ -228,54 +228,58 @@ def main():
                         st.rerun()
     
     with col2:
-        st.subheader("⚙️ Query Options")
+        st.subheader("⚙️ Search Options")
         
         # Query execution options
         limit_results = st.checkbox("Limit results", value=True)
         result_limit = st.number_input("Max rows", min_value=1, max_value=1000, value=100) if limit_results else None
         
-        show_sql = st.checkbox("Show generated SQL", value=True)
+        show_query = st.checkbox("Show technical details", value=False)
         
         # Export options
         st.markdown("**Export Options:**")
         export_format = st.selectbox("Format", ["CSV", "JSON", "Excel"])
     
-    # Display and execute SQL
+    # Display and execute search
     if "generated_sql" in st.session_state:
-        st.subheader("🔧 Generated SQL Query")
+        st.subheader("📊 Search Results")
         
         sql_query = st.session_state.generated_sql
         
-        if show_sql:
-            st.markdown(f'<div class="sql-query">{sql_query}</div>', unsafe_allow_html=True)
+        if show_query:
+            st.markdown("**Technical Query Details:**")
+            st.markdown(f'<div class="query-result">{sql_query}</div>', unsafe_allow_html=True)
         
-        # Allow manual editing
-        edited_sql = st.text_area(
-            "Edit SQL query if needed:",
-            value=sql_query,
-            height=150,
-            key="sql_editor"
-        )
+        # Allow manual editing for advanced users
+        if show_query:
+            edited_sql = st.text_area(
+                "Advanced: Edit query if needed:",
+                value=sql_query,
+                height=150,
+                key="sql_editor"
+            )
+        else:
+            edited_sql = sql_query
         
         col1, col2, col3 = st.columns([1, 1, 2])
         
         with col1:
-            if st.button("▶️ Execute Query", type="primary"):
+            if st.button("▶️ Get Results", type="primary"):
                 final_sql = edited_sql
                 
                 # Add LIMIT if requested
                 if limit_results and result_limit and "LIMIT" not in final_sql.upper():
                     final_sql += f" LIMIT {result_limit}"
                 
-                with st.spinner("Executing query..."):
+                with st.spinner("Retrieving data..."):
                     df = execute_sql_query(final_sql)
                     
                     if not df.empty:
                         st.session_state.query_results = df
                         st.session_state.last_sql = final_sql
-                        st.success(f"Query executed successfully! Found {len(df)} rows.")
+                        st.success(f"Search completed! Found {len(df)} results.")
                     else:
-                        st.info("Query executed but returned no results.")
+                        st.info("Search completed but no matching deals found.")
         
         with col2:
             if st.button("🗑️ Clear"):
@@ -332,8 +336,8 @@ def main():
                     # Note: This would require openpyxl
                     st.info("Excel export requires openpyxl package")
     
-    # Sample queries section
-    with st.expander("💡 Sample SQL Queries", expanded=False):
+    # Sample searches section
+    with st.expander("💡 Sample Searches", expanded=False):
         sample_queries = {
             "Active Deals Overview": """
 SELECT 
@@ -387,10 +391,11 @@ ORDER BY workflow_type, status;
         
         for title, query in sample_queries.items():
             st.subheader(title)
-            st.code(query, language="sql")
+            if show_query:
+                st.code(query, language="sql")
             
             if st.button(f"Run {title}", key=f"sample_{title}"):
-                with st.spinner(f"Executing {title}..."):
+                with st.spinner(f"Getting {title.lower()}..."):
                     df = execute_sql_query(query)
                     if not df.empty:
                         st.dataframe(df)
