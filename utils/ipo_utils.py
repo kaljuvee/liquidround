@@ -75,7 +75,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class IPODataFetcher:
-    """Utility class for fetching IPO data using Yahoo Finance API"""
+    """Utility class for fetching IPO data"""
     
     def __init__(self, db_path: str = "data/ipo_analytics.db"):
         self.db_path = db_path
@@ -84,7 +84,7 @@ class IPODataFetcher:
     def get_nasdaq_nyse_ipos(self, year: int = None) -> List[Dict]:
         """
         Fetch IPO data for NASDAQ and NYSE exchanges for a given year
-        Note: This is a simplified approach as Yahoo Finance doesn't have direct IPO listing API
+        Note: This is a simplified approach using market data APIs
         We'll use a combination of methods to identify recent IPOs
         """
         if year is None:

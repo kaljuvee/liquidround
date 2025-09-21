@@ -98,7 +98,7 @@ selected_year = st.sidebar.selectbox(
 
 # Data refresh button
 if st.sidebar.button("🔄 Refresh IPO Data", type="primary"):
-    with st.spinner("Fetching IPO data from Yahoo Finance..."):
+    with st.spinner("Fetching market data..."):
         try:
             # Log refresh start
             refresh_start = datetime.now().isoformat()
@@ -443,7 +443,6 @@ else:
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #666; font-size: 0.9rem;">
-    <p>IPO Analytics Dashboard | Data sourced from Yahoo Finance | 
-    Part of LiquidRound M&A Platform</p>
+    <p>IPO Analytics Dashboard | Part of LiquidRound M&A Platform</p>
 </div>
 """, unsafe_allow_html=True)
