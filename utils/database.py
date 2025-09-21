@@ -254,5 +254,178 @@ class DatabaseService:
         }
 
 
+    # IPO Analytics Methods
+    def init_ipo_tables(self):
+        """Initialize IPO-related tables."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Create IPO data table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS ipo_data (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ticker TEXT UNIQUE NOT NULL,
+                    company_name TEXT,
+                    sector TEXT,
+                    industry TEXT,
+                    exchange TEXT,
+                    ipo_date TEXT,
+                    ipo_price REAL,
+                    current_price REAL,
+                    market_cap INTEGER,
+                    price_change_since_ipo REAL,
+                    volume INTEGER,
+                    last_updated TEXT,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Create IPO refresh log table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS ipo_refresh_log (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    refresh_type TEXT,
+                    status TEXT,
+                    records_processed INTEGER,
+                    error_message TEXT,
+                    started_at TEXT,
+                    completed_at TEXT
+                )
+            ''')
+            
+            # Create indexes for better performance
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_ipo_ticker ON ipo_data (ticker)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_ipo_sector ON ipo_data (sector)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_ipo_exchange ON ipo_data (exchange)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_ipo_date ON ipo_data (ipo_date)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_ipo_market_cap ON ipo_data (market_cap)')
+            
+            conn.commit()
+            logger.info("IPO tables initialized successfully")
+    
+    def insert_ipo_data(self, ipo_records: List[Dict]) -> int:
+        """Insert or update IPO data records."""
+        if not ipo_records:
+            return 0
+        
+        # Ensure IPO tables exist
+        self.init_ipo_tables()
+        
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            inserted_count = 0
+            for record in ipo_records:
+                try:
+                    cursor.execute('''
+                        INSERT OR REPLACE INTO ipo_data 
+                        (ticker, company_name, sector, industry, exchange, ipo_date, 
+                         ipo_price, current_price, market_cap, price_change_since_ipo, 
+                         volume, last_updated)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (
+                        record['ticker'],
+                        record['company_name'],
+                        record['sector'],
+                        record['industry'],
+                        record['exchange'],
+                        record['ipo_date'],
+                        record['ipo_price'],
+                        record['current_price'],
+                        record['market_cap'],
+                        record['price_change_since_ipo'],
+                        record['volume'],
+                        record['last_updated']
+                    ))
+                    inserted_count += 1
+                except Exception as e:
+                    logger.error(f"Error inserting IPO record for {record.get('ticker', 'unknown')}: {str(e)}")
+                    
+            conn.commit()
+            logger.info(f"Inserted/updated {inserted_count} IPO records")
+            return inserted_count
+    
+    def get_ipo_data(self, year: int = None, exchange: str = None, 
+                     sector: str = None, limit: int = None) -> 'pd.DataFrame':
+        """Retrieve IPO data with optional filters."""
+        import pandas as pd
+        
+        # Ensure IPO tables exist
+        self.init_ipo_tables()
+        
+        query = "SELECT * FROM ipo_data WHERE 1=1"
+        params = []
+        
+        if year:
+            query += " AND strftime('%Y', ipo_date) = ?"
+            params.append(str(year))
+            
+        if exchange:
+            query += " AND exchange = ?"
+            params.append(exchange)
+            
+        if sector:
+            query += " AND sector = ?"
+            params.append(sector)
+            
+        query += " ORDER BY market_cap DESC"
+        
+        if limit:
+            query += " LIMIT ?"
+            params.append(limit)
+        
+        with sqlite3.connect(self.db_path) as conn:
+            df = pd.read_sql_query(query, conn, params=params)
+            
+        return df
+    
+    def log_ipo_refresh(self, refresh_type: str, status: str, records_processed: int = 0, 
+                       error_message: str = None, started_at: str = None) -> int:
+        """Log IPO data refresh operations."""
+        # Ensure IPO tables exist
+        self.init_ipo_tables()
+        
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                INSERT INTO ipo_refresh_log 
+                (refresh_type, status, records_processed, error_message, started_at, completed_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (
+                refresh_type,
+                status,
+                records_processed,
+                error_message,
+                started_at or datetime.now().isoformat(),
+                datetime.now().isoformat()
+            ))
+            
+            log_id = cursor.lastrowid
+            conn.commit()
+            return log_id
+    
+    def get_last_ipo_refresh(self) -> Optional[Dict]:
+        """Get information about the last IPO data refresh."""
+        # Ensure IPO tables exist
+        self.init_ipo_tables()
+        
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT * FROM ipo_refresh_log 
+                ORDER BY completed_at DESC 
+                LIMIT 1
+            ''')
+            
+            row = cursor.fetchone()
+            if row:
+                columns = [description[0] for description in cursor.description]
+                return dict(zip(columns, row))
+            
+        return None
+
+
 # Global database instance
 db_service = DatabaseService()

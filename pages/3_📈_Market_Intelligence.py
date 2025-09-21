@@ -219,9 +219,7 @@ def display_ma_implications():
         """)
 
 def display_sector_etf_reference():
-    """Display sector ETF reference table."""
-    st.markdown("## 📋 Sector ETF Reference")
-    
+    """Display sector ETF reference table in accordion."""
     etf_data = []
     for sector, etf in market_intelligence.sector_etfs.items():
         etf_data.append({
@@ -231,7 +229,11 @@ def display_sector_etf_reference():
         })
     
     df_etfs = pd.DataFrame(etf_data)
-    st.dataframe(df_etfs, use_container_width=True)
+    
+    # Display in accordion
+    with st.expander("📋 Sector ETF Reference", expanded=False):
+        st.markdown("**Sector ETF Mapping for Market Analysis**")
+        st.dataframe(df_etfs, use_container_width=True)
 
 def main():
     """Main function for the Market Intelligence page."""
@@ -248,8 +250,7 @@ def main():
     display_ma_implications()
     
     # ETF reference
-    with st.expander("📋 Sector ETF Reference", expanded=False):
-        display_sector_etf_reference()
+    display_sector_etf_reference()
     
     # Footer
     st.markdown("---")

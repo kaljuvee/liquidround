@@ -176,14 +176,14 @@ def main():
         return
     
     # Display data structure information
-    with st.expander("📋 Available Data", expanded=False):
+    with st.expander("📋 Database Schema", expanded=False):
         st.markdown('<div class="data-info">', unsafe_allow_html=True)
+        st.markdown("**Available tables and columns for querying:**")
         
         for table, columns in schema.items():
-            st.subheader(f"Table: {table}")
-            for column in columns:
-                st.text(f"  • {column}")
-            st.markdown("---")
+            with st.expander(f"📊 Table: {table}", expanded=False):
+                for column in columns:
+                    st.text(f"  • {column}")
         
         st.markdown('</div>', unsafe_allow_html=True)
     
@@ -304,8 +304,9 @@ def main():
             if "last_sql" in st.session_state:
                 st.metric("Query Length", len(st.session_state.last_sql))
         
-        # Display data
-        st.dataframe(df, use_container_width=True)
+        # Display data in accordion
+        with st.expander(f"📊 View Query Results ({len(df)} rows)", expanded=True):
+            st.dataframe(df, use_container_width=True)
         
         # Export functionality
         if not df.empty:
@@ -398,7 +399,8 @@ ORDER BY workflow_type, status;
                 with st.spinner(f"Getting {title.lower()}..."):
                     df = execute_sql_query(query)
                     if not df.empty:
-                        st.dataframe(df)
+                        with st.expander(f"📊 {title} Results ({len(df)} rows)", expanded=True):
+                            st.dataframe(df, use_container_width=True)
                     else:
                         st.info("No results found")
 

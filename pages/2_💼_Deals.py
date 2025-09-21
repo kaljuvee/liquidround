@@ -368,15 +368,16 @@ def main():
                 "valuation_count", "created_at"
             ]
             
-            st.dataframe(
-                filtered_df[display_columns],
-                use_container_width=True,
-                column_config={
-                    "deal_size_min": st.column_config.NumberColumn("Min Size", format="$%.0f"),
-                    "deal_size_max": st.column_config.NumberColumn("Max Size", format="$%.0f"),
-                    "created_at": st.column_config.DatetimeColumn("Created"),
-                }
-            )
+            with st.expander(f"📊 Deals Table View ({len(filtered_df)} deals)", expanded=True):
+                st.dataframe(
+                    filtered_df[display_columns],
+                    use_container_width=True,
+                    column_config={
+                        "deal_size_min": st.column_config.NumberColumn("Min Size", format="$%.0f"),
+                        "deal_size_max": st.column_config.NumberColumn("Max Size", format="$%.0f"),
+                        "created_at": st.column_config.DatetimeColumn("Created"),
+                    }
+                )
     
     else:
         st.info("No deals match the current filters.")
@@ -409,18 +410,18 @@ def main():
                 
                 # Targets
                 if not deal_details["targets"].empty:
-                    st.subheader("🎯 Target Companies")
-                    st.dataframe(deal_details["targets"], use_container_width=True)
+                    with st.expander(f"🎯 Target Companies ({len(deal_details['targets'])} targets)", expanded=False):
+                        st.dataframe(deal_details["targets"], use_container_width=True)
                 
                 # Valuations
                 if not deal_details["valuations"].empty:
-                    st.subheader("💰 Valuations")
-                    st.dataframe(deal_details["valuations"], use_container_width=True)
+                    with st.expander(f"💰 Valuations ({len(deal_details['valuations'])} valuations)", expanded=False):
+                        st.dataframe(deal_details["valuations"], use_container_width=True)
                 
                 # Workflows
                 if not deal_details["workflows"].empty:
-                    st.subheader("🔄 Related Workflows")
-                    st.dataframe(deal_details["workflows"], use_container_width=True)
+                    with st.expander(f"🔄 Related Workflows ({len(deal_details['workflows'])} workflows)", expanded=False):
+                        st.dataframe(deal_details["workflows"], use_container_width=True)
                 
                 if st.button("Close Details"):
                     st.session_state.show_deal_details = False

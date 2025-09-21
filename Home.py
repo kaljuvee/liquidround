@@ -374,33 +374,40 @@ def display_workflow_status(workflow_id: str):
                             targets = result_data["targets"]
                             st.write(f"**Found {len(targets)} potential targets:**")
                             
-                            for i, target in enumerate(targets[:10], 1):  # Show top 10
-                                col1, col2, col3 = st.columns(3)
-                                with col1:
-                                    st.write(f"**{i}. {target.get('company_name', 'Unknown')}**")
-                                with col2:
-                                    st.write(f"Revenue: {target.get('estimated_revenue', 'N/A')}")
-                                with col3:
-                                    st.write(f"Fit Score: {target.get('strategic_fit_score', 'N/A')}/5")
-                                
-                                st.write(f"*{target.get('investment_highlights', 'No highlights available')}*")
-                                st.markdown("---")
+                            # Use accordion for targets table
+                            with st.expander(f"📊 View {len(targets)} Target Companies", expanded=False):
+                                for i, target in enumerate(targets[:10], 1):  # Show top 10
+                                    col1, col2, col3 = st.columns(3)
+                                    with col1:
+                                        st.write(f"**{i}. {target.get('company_name', 'Unknown')}**")
+                                    with col2:
+                                        st.write(f"Revenue: {target.get('estimated_revenue', 'N/A')}")
+                                    with col3:
+                                        st.write(f"Fit Score: {target.get('strategic_fit_score', 'N/A')}/5")
+                                    
+                                    st.write(f"*{target.get('investment_highlights', 'No highlights available')}*")
+                                    st.markdown("---")
                         
                         elif agent_name == "valuer" and "key_metrics" in result_data:
                             metrics = result_data["key_metrics"]
-                            col1, col2, col3 = st.columns(3)
-                            with col1:
-                                st.metric("Revenue", f"${metrics.get('revenue', 0):,.0f}")
-                            with col2:
-                                st.metric("EBITDA", f"${metrics.get('ebitda', 0):,.0f}")
-                            with col3:
-                                st.metric("Market Cap", f"${metrics.get('market_cap', 0):,.0f}")
+                            
+                            # Use accordion for valuation metrics
+                            with st.expander("📈 View Valuation Metrics", expanded=False):
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    st.metric("Revenue", f"${metrics.get('revenue', 0):,.0f}")
+                                with col2:
+                                    st.metric("EBITDA", f"${metrics.get('ebitda', 0):,.0f}")
+                                with col3:
+                                    st.metric("Market Cap", f"${metrics.get('market_cap', 0):,.0f}")
                         
                         elif agent_name == "orchestrator":
-                            st.write(f"**Workflow Type:** {result_data.get('workflow_type', 'unknown')}")
-                            st.write(f"**Rationale:** {result_data.get('rationale', 'N/A')}")
+                            # Use accordion for orchestrator details
+                            with st.expander("🎯 View Workflow Classification", expanded=False):
+                                st.write(f"**Workflow Type:** {result_data.get('workflow_type', 'unknown')}")
+                                st.write(f"**Rationale:** {result_data.get('rationale', 'N/A')}")
                         
-                        # Always show raw JSON data
+                        # Always show raw JSON data in accordion
                         with st.expander("📋 Raw JSON Data", expanded=False):
                             st.json(result_data)
         
