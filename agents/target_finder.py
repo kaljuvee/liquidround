@@ -4,11 +4,11 @@ Target Finder agent for identifying acquisition targets.
 import yfinance as yf
 import pandas as pd
 from typing import Dict, Any, List
-from base_agent import BaseAgent
+from .base_agent import BaseAgent
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.state import State
+from ..utils.state import State
 
 
 class TargetFinderAgent(BaseAgent):

@@ -12,9 +12,9 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from workflow import workflow_instance
-from utils.logging import get_logger
-from utils.config import config
+from .workflow import workflow_instance
+from ..utils.logging import get_logger
+from ..utils.config import config
 
 # Configure page
 st.set_page_config(

@@ -9,11 +9,11 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.state import State, create_initial_state, add_message
-from utils.logging import get_logger
-from orchestrator import OrchestratorAgent
-from target_finder import TargetFinderAgent
-from valuer import ValuerAgent
+from ..utils.state import State, create_initial_state, add_message
+from ..utils.logging import get_logger
+from .orchestrator import OrchestratorAgent
+from .target_finder import TargetFinderAgent
+from .valuer import ValuerAgent
 
 logger = get_logger("workflow")
 

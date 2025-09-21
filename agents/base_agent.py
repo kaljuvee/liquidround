@@ -13,9 +13,9 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.state import State, update_agent_result
-from utils.logging import get_logger
-from utils.config import config
+from ..utils.state import State, update_agent_result
+from ..utils.logging import get_logger
+from ..utils.config import config
 
 
 class BaseAgent(ABC):
