@@ -3,6 +3,10 @@ Tests for state management utilities.
 """
 import pytest
 from datetime import datetime
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
 from utils.state import (
     create_initial_state,
     add_message,
