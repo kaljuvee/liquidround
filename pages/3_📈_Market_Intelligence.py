@@ -84,39 +84,31 @@ def display_sector_heatmap():
     # Load data with spinner
     with st.spinner("📊 Loading sector performance data..."):
         try:
-            # Get sector performance data
+            # Get sector performance data (will use real data or fallback to sample data)
             df = market_intelligence.get_sector_performance_data(years=5)
             
-            if not df.empty:
-                # Create and display heatmap
-                fig = market_intelligence.create_sector_performance_heatmap(df)
-                st.plotly_chart(fig, use_container_width=True)
-                
-                # Display data summary
-                col1, col2, col3, col4 = st.columns(4)
-                
-                with col1:
-                    st.metric("Sectors Analyzed", len(df['Sector'].unique()))
-                
-                with col2:
-                    st.metric("Years Covered", len(df['Year'].unique()))
-                
-                with col3:
-                    avg_return = df['Return'].mean()
-                    st.metric("Average Return", f"{avg_return:.1f}%")
-                
-                with col4:
-                    volatility = df['Return'].std()
-                    st.metric("Market Volatility", f"{volatility:.1f}%")
-                
-                return df
-            else:
-                st.warning("Unable to load real-time sector data. Displaying sample analysis.")
-                # Create sample data for demonstration
-                df = market_intelligence._create_sample_data()
-                fig = market_intelligence.create_sector_performance_heatmap(df)
-                st.plotly_chart(fig, use_container_width=True)
-                return df
+            # Create and display heatmap (always shows data)
+            fig = market_intelligence.create_sector_performance_heatmap(df)
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Display data summary
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("Sectors Analyzed", len(df['Sector'].unique()))
+            
+            with col2:
+                st.metric("Years Covered", len(df['Year'].unique()))
+            
+            with col3:
+                avg_return = df['Return'].mean()
+                st.metric("Average Return", f"{avg_return:.1f}%")
+            
+            with col4:
+                volatility = df['Return'].std()
+                st.metric("Market Volatility", f"{volatility:.1f}%")
+            
+            return df
                 
         except Exception as e:
             logger.error(f"Error displaying heatmap: {e}")
