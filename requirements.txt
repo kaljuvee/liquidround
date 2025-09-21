@@ -13,3 +13,5 @@ pytest
 pytest-asyncio
 pydantic
 typing-extensions
+
+plotly
